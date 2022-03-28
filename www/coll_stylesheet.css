@@ -1,0 +1,240 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat&display');
+
+
+.out_text {
+ width:30%;
+ justify-content: center;
+ align-items: center;
+ padding-top: 50px;
+
+}
+
+
+
+.text-1 {
+    text-align:center;
+    font-size:150%;
+    margin-top:10%;
+    margin-bottom:0;
+    font-family: 'Roboto', sans-serif;
+}
+
+
+.pass-button {
+  padding-top: 10px;
+  margin-right: 45px;
+  
+  
+}
+
+div{
+  word-wrap: break-word;
+}
+
+
+#pass {
+  color:gray;
+  text-decoration: underline dotted;
+  float:right;
+}
+
+.pass-title{
+  text-align: center;
+}
+
+.select-card {
+  margin-top: 40px;
+}
+
+.inputs {
+  width:50%;
+}
+
+
+.input-1 {
+  margin-top:25px;
+}
+
+.block-title{
+  color:black;
+  font-size: 125%;
+  white-space: normal;
+}
+
+.input-label{
+  color:black;
+  white-space: normal;
+}
+
+.top-district-logo{
+  position:absolute;
+  right:10px;
+  top:7px;
+
+}
+
+.dis-name{
+  margin:auto;
+  margin-right: 10px;
+  font-size: 85%;
+  font-weight: 500;
+  font-family: 'Montserrat', sans-serif;
+  text-align: center;
+}
+
+.tab{
+  font-size:30%;
+}
+
+.info-text{
+  width:33%;
+  padding:25px;
+  font-size:400%;
+}
+
+#save {
+   background-color: #DB9743;
+}
+
+#reset,#submit_pass {
+   background-color: #2a3a6e;
+}
+
+#toggle_menu {
+  background-color: gray;
+}
+
+.other-button{
+  width:16%;
+  padding:10px;
+  margin-top: 5px;
+}
+
+.card-button {
+  padding:5px;
+  top:0;
+  width:180px;
+}
+
+.side-button{
+  padding:5px; 
+  width:45%;
+}
+
+
+#down_home, #down_students, #down_staff, #down_finances, #down_academic, 
+  #down_work, #down_overview_csv, #down_overview, #down_plot {
+   background-color: #2a3a6e;
+ }
+
+.save-button .tooltiptext {
+  visibility: hidden;
+  width: 100%;
+  bottom: 100%;
+  left: 50%;
+  margin-left: -50%; /* Use half of the width (120/2 = 60), to center the tooltip */
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  padding: 10px 0;
+  margin-top: 5px;
+  border-radius: 6px;
+ 
+  /* Position the tooltip text - see examples below! */
+  position: absolute;
+  z-index: 1;
+}
+
+.save-button:hover .tooltiptext {
+  visibility: visible;
+}
+
+.save-button .tooltiptext::after {
+  content: " ";
+  position: absolute;
+  top: 100%; /* At the bottom of the tooltip */
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: black transparent transparent transparent;
+}
+
+.save-button .tooltiptext {
+  opacity: 0;
+  transition: opacity 1s;
+}
+
+.save-button:hover .tooltiptext {
+  opacity: 1;
+}
+
+.side-panel{
+  width:25%;
+}
+
+.title{
+  font-size: 1100%;
+  font-weight: 600;
+}
+
+.subtitle{
+  font-size: 900%;
+  font-weight: 500;
+}
+.comparison{
+  font-size: 350%;
+  font-weight: 500;
+  text-align: center;
+}
+
+#at_glance{
+  text-align: center;
+  width:75%;
+  height: auto;
+  margin: 2% auto;
+  padding: 10px;
+  position: relative;
+}
+
+.float-logo{
+  position: absolute;
+  right:20px;
+  top:20px;
+}
+
+.text1{
+  font-size:500%;
+  text-align: center;
+}
+
+.grid-block{
+  width:33%;
+}
+
+.quad-block{
+  width:25%;
+}
+
+.item-content .item-after{
+ color: #DB9743;
+ font-size: 118%;
+ text-align: left;
+ align-items: flex-start;
+}
+
+.shiny-html-output {
+  margin:0;
+  padding:0;
+}
+
+
+.test {
+  border-color: black;
+  border-style: solid;
+}
+
+.answer-text{
+  position:absolute;
+  font-size: 120px;
+}
