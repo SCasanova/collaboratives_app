@@ -4,7 +4,8 @@
 
 library(magrittr)
 library(shiny)
-options(encoding = "UTF-8")
+options(encoding = "UTF-8",
+        warn = -1)
 
 
 # Connect to database -----------------------------------------------
@@ -129,13 +130,123 @@ districts_serving <- readr::read_csv('districts_serving.csv')
 
 #Categories and options used for the plot feature
 stat_categories <- c(
+  'Basic Info',
+  'Finances',
   'Tuitions',
-  'Compensation',
+  'Tuitions (Detailed)', 
   'Working Conditions'
 )
 
-axis_options <- c(
+statistic_names_full <- c(
+  'Collaborative', #1
+  'Director Base Salary',
+  'Expenditures',
+  'Districts Served',
+  'Total Staff',
+  'Total FTE',
+  'Professional FTE',
+  'Support FTE',
+  'Profesionals in Union',
+  'Non-Professionals in Union',
+  'Total FTEs supporting PreK-22',
+  'Gross Anual Payroll',
+  'Avg. Staff Salary',
+  'Avg. Member Tuition',
+  'Avg. Non-Member Tuition',
+  'Total Students',
+  'Avg. Staff Salary per Student',
+  'Member Per Diem',
+  'Member School Year',
+  'Member Summer', #20
+  'Member Total Tuition',
+  'Non-Member Per Diem',
+  'Non-Member School Year',
+  'Non-Member Summer',
+  'Non-Member Total Tuition', 
+  'Summer Days',
+  'Member Per Diem PreK-22',
+  'Member Per Diem Middle/High School',
+  'Member Per Diem Elementary',
+  'Member Per Diem High School',#30
+  'Member Per Diem Post-Grad/Transition', 
+  'Member Per Diem Elementary/Middle',
+  'Member Per Diem Middle',
+  'Member School Year PreK-22',
+  'Member School Year Middle/High School',
+  'Member School Year Elementary',
+  'Member School Year High School',
+  'Member School Year Post-Grad/Transition',
+  'Member School Year Elementary/Middle',
+  'Member School Year Middle',
+  'Member Summer PreK-22',
+  'Member Summer Middle/High School',
+  'Member Summer Elementary',
+  'Member Summer High School',
+  'Member Summer Post-Grad/Transition',
+  'Member Summer Elementary/Middle',
+  'Member Summer Middle',
+  'Member Total Tuition PreK-22',
+  'Member Total Tuition Middle/High School',
+  'Member Total Tuition Elementary',#50
+  'Member Total Tuition High School', 
+  'Member Total Tuition Post-Grad/Transition',
+  'Member Total Tuition Elementary/Middle',
+  'Member Total Tuition Middle',
+  'Non-Member Per Diem PreK-22',
+  'Non-Member Per Diem Middle/High School',
+  'Non-Member Per Diem Elementary',
+  'Non-Member Per Diem High School',
+  'Non-Member Per Diem Post-Grad/Transition',
+  'Non-Member Per Diem Elementary/Middle',
+  'Non-Member Per Diem Middle',
+  'Non-Member School Year PreK-22',
+  'Non-Member School Year Middle/High School',
+  'Non-Member School Year Elementary',
+  'Non-Member School Year High School',
+  'Non-Member School Year Post-Grad/Transition',
+  'Non-Member School Year Elementary/Middle',
+  'Non-Member School Year Middle',
+  'Non-Member Summer PreK-22',
+  'Non-Member Summer Middle/High School',#70
+  'Non-Member Summer Elementary', 
+  'Non-Member Summer High School',
+  'Non-Member Summer Post-Grad/Transition',
+  'Non-Member Summer Elementary/Middle',
+  'Non-Member Summer Middle',
+  'Non-Member Total Tuition PreK-22',
+  'Non-Member Total Tuition Middle/High School',
+  'Non-Member Total Tuition Elementary',
+  'Non-Member Total Tuition High School',
+  'Non-Member Total Tuition Post-Grad/Transition',
+  'Non-Member Total Tuition Elementary/Middle',
+  'Non-Member Total Tuition Middle',
+  'Work Year',
+  'Hours per Day',
+  'Min. Hourly',
+  'Max. Hourly',
+  'Median Hourly',
+  'Sick Days',
+  'Personal Days',
+  'Paid Holidays',#90
+  'Vacation Days', 
+  'Bachelors First',
+  'Bachelors Top Step',
+  'Masters First',
+  'Masters Top Step',
+  'Masters 15+ First',
+  'Masters 15+ Top Step',
+  'Masters 30+ First',
+  'Masters 30+ Top Step',
+  'CAGS First',#100
+  'CAGS Top Step', 
+  'Doctorate First',
+  'Doctorate Top Step',
+  'Bottom Right'
+
 )
+
+axis_options <- purrr::set_names(colnames(school_data), statistic_names_full)
+
 
 overview_statistics <- c( #Full name for overview table stats
     "Total Enrollment",
@@ -346,44 +457,34 @@ ui <- shinyMobile::f7Page(
           ), 
           shinyMobile::f7Tab(
                tabName = "Member Details",
-                icon = shinyMobile::f7Icon("search"),
-                active = F,
-                tags$div(style = 'display:flex',
-                 tags$div(style = 'width:20%;',
-                   shinyMobile::f7Shadow(
-                     hover = T,
-                     intensity = 16,
-                     shinyMobile::f7Card(
-                       tags$div(
-                         style = 'display:flex;',
-                         tags$div(
-                           shinyMobile::f7Button(
-                             inputId = 'down_overview',
-                             label = tags$span(tags$i(class = 'fas fa-camera'), tags$span('Image')) #fas fa classes corresponf to fontawesome
-                           ),
-                           class = "side-button"
-                         ),
-                         tags$div(
-                      shinyMobile::f7DownloadButton( #various download functionalities
+               icon = shinyMobile::f7Icon("search"),
+               active = F,
+               shinyMobile::f7Shadow(
+                 hover = T,
+                 intensity = 16,
+                 shinyMobile::f7Card(
+                   tags$div(
+                     style = 'display:flex;',
+                     tags$div(
+                       shinyMobile::f7Button(
+                         inputId = 'down_overview',
+                         label = tags$span(tags$i(class = 'fas fa-camera'), tags$span('Image')) #fas fa classes corresponf to fontawesome
+                       ),
+                       class = "card-button"
+                     ),
+                     tags$div(
+                       shinyMobile::f7DownloadButton(#various download functionalities
                          outputId = 'down_overview_csv',
-                         label = 'CSV'
-                      ), class = "side-button"
-                      )
-                       )
-                       
+                         label = 'CSV'),
+                       class = "card-button"
                      )
-                   )
-                 ),
-                 tags$div(style = 'width:80%;', id = 'overview_table',
-                          shinyMobile::f7Shadow(
-                            hover = T,
-                            intensity = 16,
-                            shinyMobile::f7Card(
+                   ),
+                   tags$div( id = 'overview_table',
                               gt::gt_output('comparisons_table')
-                            )
-                          )
+                             )
+                  
                  )
-                )
+               )
           ),
           shinyMobile::f7Tab(
                tabName = "Finances",
@@ -1195,15 +1296,18 @@ collaborative_comps_initial <- reactive({
 # Overview ----------------------------------------------------------------
 
   observeEvent(input$down_overview, { #take "screenshot" of  selector
-    shinyscreenshot::screenshot(selector = '#overview_table' , filename =  paste(comp_year(), district(),'Overview Table'), scale = 4)
+    shinyscreenshot::screenshot(selector = '#overview_table' , filename =  paste(collaborative(),'Sending Districts'), scale = 4)
   })  
+  
+  
+  
   
    output$down_overview_csv = downloadHandler(
      filename = function() {
-       paste(comp_year(), district(), "Overview.csv")
+       paste(collaborative(), "Sending Districts.csv")
      },
      content = function(file) {
-       write.csv(comp_table(), file, row.names = F)
+       write.csv(comp_df(), file, row.names = F)
      }
    )
    
@@ -1241,7 +1345,6 @@ collaborative_comps_initial <- reactive({
                                 "% Core Classes Taught by Exp Teachers")),
                         dplyr::desc(get(colnames(.)[1])))
    })
-   observe(print(comp_df()))
    
    value_cols <- reactive({
      if (ncol(comp_df()) > 2) {
@@ -1656,7 +1759,6 @@ observeEvent(input$down_finances, { #take "screenshot" of finance selector
       dplyr::mutate(dplyr::across(.fns = as.numeric))
     })
   
-  observe(print(summer_non_member_data()))
   
 
 
@@ -1773,14 +1875,20 @@ output$y_var_disp <- renderUI({
 output$x_var_disp <- renderUI({
   req(input$x_cat)
   if(input$plot_type == 'Scatter'){
-    if (input$x_cat == "Tuitions") {
-    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[6:21])
+  if (input$x_cat == "Basic Info") {
+    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(4:8,16)])
   }
-  else if (input$x_cat == "Compensation") {
-    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[22:29])
+  else  if (input$x_cat == "Finances") {
+    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(2,3,12,13,17,92:104)])
+  }
+  else  if (input$x_cat == "Tuitions") {
+    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(14,15,18:25)])
+  }
+  else  if (input$x_cat == "Tuitions (Detailed)") {
+    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(27:82)])
   }
   else if (input$x_cat == "Working Conditions") {
-    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[30:37])
+    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(9:11, 26, 83:91)])
   
   }
   }
@@ -1788,17 +1896,158 @@ output$x_var_disp <- renderUI({
 
 output$y_var_disp <- renderUI({
   req(input$y_cat)
-  if (input$y_cat == "Tuitions") {
-    shinyMobile::f7Select("y_var", h3('Y-Axis Variable'), choices = axis_options[6:21])
+  if (input$y_cat == "Basic Info") {
+    shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(4:8,16)])
   }
-  else if (input$y_cat == "Compensation") {
-    shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[22:29])
+  else  if (input$y_cat == "Finances") {
+    shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(2,3,12,13,17,92:104)])
+  }
+  else  if (input$y_cat == "Tuitions") {
+    shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(14,15,18:25)])
+  }
+  else  if (input$y_cat == "Tuitions (Detailed)") {
+    shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(27:82)])
   }
   else if (input$y_cat == "Working Conditions") {
-    shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[30:37])
+    shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(9:11, 26, 83:91)])
+  
   }
 })
 
+y <- reactive(input$y_var)
+x <- reactive(input$x_var)
+
+plotdata <- reactive({
+  req(comp_collabortives())
+  plot_data <- school_data %>%
+    dplyr::filter(
+      collaborative %in% comp_collabortives() | collaborative == collaborative() &
+      !is.na(y())
+    ) %>%
+    dplyr::mutate(
+      is_district = ifelse(collaborative == collaborative(), collaborative(), "Others"),
+      short_district = stringr::str_trunc(collaborative, 20, "right")
+    ) %>% 
+    dplyr::select(collaborative, y(), x(), short_district) %>% 
+    dplyr::filter(!is.na(y()))
+})
+
+y_col <-reactive({
+   plotdata() %>%
+    dplyr::filter(!is.na(y())) %>%
+    dplyr::pull(y())
+})
+
+output$userplot <- plotly::renderPlotly({
+        if (input$plot_type == "Scatter"){
+          req(x())
+          req(y())
+            plotly::plot_ly(
+              data =plotdata(),
+                x = ~get(x()),
+                y = ~get(y()),
+                type = "scatter",
+                mode = "markers",
+                marker = list(
+                    size = 30,
+                    opacity = .5
+                ),
+                color = ~short_district,
+                colors = ggsci::pal_jco()(10),
+                hovertemplate = paste((plotdata() %>% dplyr::pull(collaborative)),
+                                      "<br>",
+                                      names(axis_options)[axis_options == x()], ":",
+                                      '%{x:.4s}',
+                                      "<br>",
+                                      names(axis_options)[axis_options == y()], ":",
+                                      '%{y:.4s}',
+                                      "<extra></extra>"),
+                height = 630) %>%
+              plotly::layout(
+                yaxis = list(title = names(axis_options)[axis_options == y()], fixedrange = T),
+                xaxis = list(title = names(axis_options)[axis_options == x()], fixedrange = T),
+                title = paste0(
+                  collaborative(),
+                  " vs. Comparison Collaboratives",
+                  "<br><sup>",
+                  names(axis_options)[axis_options == y()],
+                  "vs.",
+                  names(axis_options)[axis_options == x()],
+                  "</sup>"
+                ),
+                       images = list(
+                           source = base64enc::dataURI(file = "https://raw.githubusercontent.com/SCasanova/arxed_ddd/main/www/D3%20Logo.png"),
+                           x = 1, y = 0.1,
+                           sizex = 0.2, sizey = 0.2
+                       ))
+        }else if (input$plot_type == "Pie"){
+          req(y())
+            y_mean <- mean(y_col(), na.rm = T)
+            plotly::plot_ly(
+              data = plotdata(),
+              labels = ~ collaborative,
+              values = ~ get(y()),
+              marker = list(colors = ggsci::pal_jco()(10)),
+              textinfo = 'label+percent',
+              hoverinfo = 'text',
+              text = ~ paste(names(axis_options)[axis_options == y()], ':', get(y())),
+              height = 630
+            ) %>%
+              plotly::add_pie(hole = 0.4) %>%
+              plotly::layout(
+                title = paste0(collaborative(), " vs. Comparison Collaboratives",
+                               "<br><sup>", names(axis_options)[axis_options == y()], "</sup>"),
+                               margin = list(l = 50,r = 50,b = 50,t = 50,pad = 4), 
+                       legend = list(font = list(size = 11))
+                )
+            
+        }else{
+          req(y())
+            y_mean <- mean(y_col(), na.rm = T)
+            
+            plotly::plot_ly(
+              data =plotdata(),
+                x = ~collaborative,
+                y = ~get(y()),
+                type = "bar",
+                color = ~short_district,
+                colors = ggsci::pal_jco()(10),
+                hovertemplate = paste('%{x}',
+                                      "<br>",
+                                      names(axis_options)[axis_options == y()], ":",
+                                      '%{y:.4s}', "<extra></extra>"),
+                texttemplate = '%{y:.3s}', 
+                textposition = 'outside',
+                height = 630) %>%
+                plotly::layout(xaxis = list(title = "Collaborative", showticklabels = F, fixedrange = T),
+                       yaxis = list(title = names(axis_options)[axis_options == y()] , fixedrange = T),
+                       title = paste0(collaborative(), " vs. Comparison Collaboratives",
+                                     "<br><sup>", names(axis_options)[axis_options == y()], "</sup>"),
+                       legend = list(font = list(size = 11)),
+                       annotations = list(
+                           x = 0,
+                           y = y_mean,
+                           text = paste("Avg:", round(y_mean,1)),
+                           xref = "x",
+                           yref = "y",
+                           showarrow = TRUE,
+                           arrowhead = 7,
+                           ax = 20,
+                           ay = -40
+                       ),
+                       shapes = list(type='line', x0 = 0, x1 = (length(y_col()) - sum(is.na(y_col()))), y0=y_mean, y1=y_mean, line=list(dash='dot', width=1)),
+                       images = list(
+                           source = base64enc::dataURI(file = "https://raw.githubusercontent.com/SCasanova/arxed_ddd/main/www/D3%20Logo.png"),
+                           x = 1, y = 0.1,
+                           sizex = 0.2, sizey = 0.2
+                       ))
+        }
+        
+    })
+
+observeEvent(input$down_plot, { #take "screenshot" of  selector
+    shinyscreenshot::screenshot(selector = '#plot_card' , filename =  paste(collaborative(),'Custom Plot'), scale = 4)
+  })
 
 
  
