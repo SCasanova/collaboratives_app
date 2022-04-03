@@ -1918,7 +1918,7 @@ y <- reactive(input$y_var)
 x <- reactive(input$x_var)
 
 plotdata <- reactive({
-  req(comp_collabortives())
+  req(collaborative())
   plot_data <- school_data %>%
     dplyr::filter(
       collaborative %in% comp_collabortives() | collaborative == collaborative() &
