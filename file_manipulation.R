@@ -53,9 +53,9 @@ para_salaries <- read_csv('collaborative_conditions.csv') %>%
   dplyr::slice(1:17)
 
 
-director_salaries <- read_csv('collaborative_directors.csv') %>% 
+director_details <- read_csv('collaborative_directors.csv') %>% 
   janitor::clean_names() %>% 
-  dplyr::select(collaborative,fy20_base_salary:additional_compensation,number_of_years_as_exec_dir:x25)
+  dplyr::select(collaborative,additional_compensation,number_of_years_as_exec_dir:percent_med)
 
 fy2022_data <- read_csv('Collaboratives - FY22.csv') %>% 
   janitor::clean_names() %>% 
@@ -81,7 +81,8 @@ collaborative_data <- fy2022_data %>%
   left_join(tuition, by = 'collaborative') %>% 
   left_join(all_tuition, by = 'collaborative') %>% 
   left_join(para_salaries, by = 'collaborative') %>% 
-  left_join(fy2022_salaries, by = 'collaborative')
+  left_join(fy2022_salaries, by = 'collaborative') %>% 
+  left_join(director_details, by = 'collaborative')
 
 
 write_csv(collaborative_data, 'collaborative_data.csv')  

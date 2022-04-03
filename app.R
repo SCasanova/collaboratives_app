@@ -57,7 +57,7 @@ check_creds <- function(dbname, host, port, db_user, db_password) {
 
 
  
- collaborative_list <- c('ACCEPT Education Collaborative',
+ collaborative_names <- c('ACCEPT Education Collaborative',
                          'Assabet Valley Collaborative',
                          'Bi-County Collaborative',
                          'C.A.S.E. Concord Area SPED Collaborative',
@@ -81,6 +81,33 @@ check_creds <- function(dbname, host, port, db_user, db_password) {
                          'Southern Worcester County Educational Collaborative',
                          'The Education Cooperative',
                          'Valley Collaborative')
+
+ short_collaborative_names <- c('ACCEPT',
+                         'AVC',
+                         'BICO',
+                         'CASE',
+                         'CAPS',
+                         'CCC',
+                         'CMC',
+                         'CES',
+                         'CREST',
+                         'KEC',
+                         'LABBB',
+                         'LPVEC',
+                         'NRC',
+                         'NEC',
+                         'PAC',
+                         'READS',
+                         'SEEM',
+                         'SEC',
+                         'SCEC',
+                         'SSEC',
+                         'SMEC',
+                         'SWCEC',
+                         'TEC',
+                         'Valley Collaborative')
+ 
+ collaborative_list <- purrr::set_names(collaborative_names, short_collaborative_names)
  
   gt_theme_538 <- function(data,...) {
     data %>%
@@ -147,7 +174,7 @@ statistic_names_full <- c(
   'Professional FTE',
   'Support FTE',
   'Profesionals in Union',
-  'Non-Professionals in Union',
+  'Non-Professionals in Union', #10
   'Total FTEs supporting PreK-22',
   'Gross Anual Payroll',
   'Avg. Staff Salary',
@@ -177,7 +204,7 @@ statistic_names_full <- c(
   'Member School Year High School',
   'Member School Year Post-Grad/Transition',
   'Member School Year Elementary/Middle',
-  'Member School Year Middle',
+  'Member School Year Middle', #40
   'Member Summer PreK-22',
   'Member Summer Middle/High School',
   'Member Summer Elementary',
@@ -197,7 +224,7 @@ statistic_names_full <- c(
   'Non-Member Per Diem Elementary',
   'Non-Member Per Diem High School',
   'Non-Member Per Diem Post-Grad/Transition',
-  'Non-Member Per Diem Elementary/Middle',
+  'Non-Member Per Diem Elementary/Middle', #60
   'Non-Member Per Diem Middle',
   'Non-Member School Year PreK-22',
   'Non-Member School Year Middle/High School',
@@ -217,7 +244,7 @@ statistic_names_full <- c(
   'Non-Member Total Tuition Middle/High School',
   'Non-Member Total Tuition Elementary',
   'Non-Member Total Tuition High School',
-  'Non-Member Total Tuition Post-Grad/Transition',
+  'Non-Member Total Tuition Post-Grad/Transition', #80
   'Non-Member Total Tuition Elementary/Middle',
   'Non-Member Total Tuition Middle',
   'Work Year',
@@ -241,7 +268,16 @@ statistic_names_full <- c(
   'CAGS Top Step', 
   'Doctorate First',
   'Doctorate Top Step',
-  'Bottom Right'
+  'Bottom Right',
+  'Additional Compensation',
+  '# Years as Exec. Director',
+  '# Years in Proffesion',
+  'Sick Days Annually',
+  'Sick Days Accumulate To',
+  'Vacation Days Director', #110
+  'Professional Dues Paid',
+  'Travel Mileage',
+  '% Medical Insurance Paid'
 
 )
 
@@ -326,7 +362,7 @@ ui <- shinyMobile::f7Page(
                            class = 'inputs',
                            shinyMobile::f7CheckboxGroup(
                              inputId = 'comp_cond',
-                             label = h5('3. Choose comparison collaborative categories:'),
+                             label = h5('3. Choose comparison collaboratives:'),
                              choices = c('All Collaboratives', 'Region', 'My Selections')
                            )
                          ),
@@ -338,7 +374,7 @@ ui <- shinyMobile::f7Page(
                              class = 'input-label',
                              h3('5. View your comparison collaboratives and add/remove any manually:')
                            ),
-                           choices = collaborative_list,
+                           choices = collaborative_names,
                            multiple = TRUE,
                            width = '100%'
                          )
@@ -413,9 +449,11 @@ ui <- shinyMobile::f7Page(
                        tags$div(htmlOutput('comp_2'),style = 'margin-bottom:20px;'),
                        br(),
                        plotly::plotlyOutput('sending_cola', height = 'auto'),
-                        plotly::plotlyOutput('sending_budget', height = 'auto'),
+                       plotly::plotlyOutput('sending_budget', height = 'auto'),
                        plotly::plotlyOutput('sending_enrollment', height = 'auto'),
-                        plotly::plotlyOutput('sending_average_salary', height = 'auto')
+                       plotly::plotlyOutput('sending_upper_left', height = 'auto'),
+                       plotly::plotlyOutput('sending_lower_right', height = 'auto'),
+                       plotly::plotlyOutput('sending_average_salary', height = 'auto')
                      )
                    )
                  ),
@@ -535,6 +573,11 @@ ui <- shinyMobile::f7Page(
           shinyMobile::f7Tab(
                tabName = "Students",
                 icon = shinyMobile::f7Icon("person_3"),
+                active = F
+          ),
+          shinyMobile::f7Tab(
+               tabName = "Exec. Director",
+                icon = shinyMobile::f7Icon("info"),
                 active = F
           ),
           shinyMobile::f7Tab(
@@ -666,7 +709,7 @@ ui <- shinyMobile::f7Page(
    
    personal_collaborative_options <- reactive({
      if(active_user() %in% c('Mike', 'Brian', 'Santiago')){ #Admin access
-       collaborative_list
+       collaborative_names
      } else{
         sqlQuery(query_district()) %>% dplyr::pull(collaborative_name) #Restrict users to their own district
      }
@@ -723,12 +766,14 @@ collaborative_comps_initial <- reactive({
             query <- paste0("SELECT collaborative_name  
                               FROM collaboratives;")
             sqlQuery(query) %>% 
+              dplyr::filter(collaborative_name != collaborative()) %>% 
               dplyr::pull(collaborative_name)
       } else if(input$comp_cond[1] == 'Region'){
            query <- paste0("SELECT collaborative_name  
                             FROM collaboratives 
                             WHERE region =", "'",  region(),"';") 
         sqlQuery(query)%>% 
+          dplyr::filter(collaborative_name != collaborative()) %>% 
               dplyr::pull(collaborative_name)
       } else if(input$comp_cond[1] == 'My Selections'){
         query <- paste0("SELECT school
@@ -832,18 +877,17 @@ collaborative_comps_initial <- reactive({
       )
   })
   
+
+  
+  
   # Title of home panel
     output$at_glance <- renderUI({
       req(collaborative())
-        
-        for (i in 1:length(comp_collabortives())){
-            if (i == 1){
-                comp_list <- comp_collabortives()[i]
-            }
-            else{
-                comp_list <- paste0(comp_list, ", ", comp_collabortives()[i])
-            }
-        }
+      short_names <- purrr::map(comp_collabortives(), function(x) names(collaborative_list)[collaborative_list == x]) %>% 
+                             unlist()
+      comp_list <- paste(short_names, collapse = ", ")
+     
+
       tags$div(
         tags$div(class = 'title',
           tags$span(paste0(collaborative()), style = "color:#DB9743"), " at a Glance"),
@@ -954,7 +998,7 @@ collaborative_comps_initial <- reactive({
         y = c('2020-21', '2021-22', '2022-23'),
         type = 'bar',
         name = 'A',
-        height = 235,
+        height = 150,
         orientation = 'h',
         marker = list(color = '#2a3a6e'),
         hovertemplate = '%{x:.2%}<extra></extra>',
@@ -1033,6 +1077,72 @@ collaborative_comps_initial <- reactive({
           yaxis = list(title = "", fixedrange = T),
           barmode = 'group',
           title = 'Average Enrollment',
+          autosize = T,
+          showlegend =F, margin = list(l = 0,r = 0,b = 0,t = 50,pad = 4), 
+          font = list(size = 12)
+        )
+  })
+ 
+ sending_upper_left_data <- reactive({
+   sending_plot_df() %>% 
+     dplyr::filter(category %in% c('upper_left_2022_23','upper_left_2021_22', 'upper_left_2020_21'))
+ })
+ 
+ 
+ output$sending_upper_left <- plotly::renderPlotly({
+      req(collaborative())
+      plotly::plot_ly(
+        sending_upper_left_data(),
+        x = ~x,
+        y = c('2020-21', '2021-22', '2022-23'),
+        type = 'bar',
+        name = 'A',
+        height = 150,
+        orientation = 'h',
+        marker = list(color = '#2a3a6e'),
+        hovertemplate = '%{x:.4s}<extra></extra>',
+        texttemplate = '%{x:.3s}',
+        textposition = 'inside'
+      ) %>%
+         plotly:: config(displayModeBar = FALSE) %>%
+        plotly::layout(
+          xaxis = list(title = "", fixedrange = T,showticklabels = F),
+          yaxis = list(title = "", fixedrange = T),
+          barmode = 'group',
+          title = 'Upper Left',
+          autosize = T,
+          showlegend =F, margin = list(l = 0,r = 0,b = 0,t = 50,pad = 4), 
+          font = list(size = 12)
+        )
+  })
+ 
+ sending_lower_right_data <- reactive({
+   sending_plot_df() %>% 
+     dplyr::filter(category %in% c('lower_right_2022_23','lower_right_2021_22', 'lower_right_2020_21'))
+ })
+ 
+ 
+ output$sending_lower_right <- plotly::renderPlotly({
+      req(collaborative())
+      plotly::plot_ly(
+        sending_lower_right_data(),
+        x = ~x,
+        y = c('2020-21', '2021-22', '2022-23'),
+        type = 'bar',
+        name = 'A',
+        height = 150,
+        orientation = 'h',
+        marker = list(color = '#2a3a6e'),
+        hovertemplate = '%{x:.4s}<extra></extra>',
+        texttemplate = '%{x:.3s}',
+        textposition = 'inside'
+      ) %>%
+         plotly:: config(displayModeBar = FALSE) %>%
+        plotly::layout(
+          xaxis = list(title = "", fixedrange = T,showticklabels = F),
+          yaxis = list(title = "", fixedrange = T),
+          barmode = 'group',
+          title = 'Lower Right',
           autosize = T,
           showlegend =F, margin = list(l = 0,r = 0,b = 0,t = 50,pad = 4), 
           font = list(size = 12)
@@ -1123,7 +1233,7 @@ collaborative_comps_initial <- reactive({
         y = ~ collaborative,
         type = 'bar',
         name = collaborative(),
-        height = 235,
+        height = 250,
         marker = list(color = '#DB9743'),
         hovertemplate = paste0(collaborative()  , ': %{y:.4s}<extra></extra>'),
         texttemplate = '%{y:.3s}',
@@ -1158,7 +1268,7 @@ collaborative_comps_initial <- reactive({
         y = ~ collaborative,
         type = 'bar',
         name = collaborative(),
-        height = 235,
+        height = 250,
         marker = list(color = '#DB9743'),
         hovertemplate = paste0(collaborative()  , ': %{y:.4s}<extra></extra>'),
         texttemplate = '%{y:.3s}',
@@ -1194,7 +1304,7 @@ collaborative_comps_initial <- reactive({
         y = ~ collaborative,
         type = 'bar',
         name = collaborative(),
-        height = 235,
+        height = 250,
         marker = list(color = '#DB9743'),
         hovertemplate = paste0(collaborative()  , ': %{y:.4s}<extra></extra>'),
         texttemplate = '%{y:.3s}',
@@ -1230,7 +1340,7 @@ collaborative_comps_initial <- reactive({
         y = ~ collaborative,
         type = 'bar',
         name = collaborative(),
-        height = 235,
+        height = 250,
         marker = list(color = '#DB9743'),
         hovertemplate = paste0(collaborative()  , ': %{y:.3s}<extra></extra>'),
         texttemplate = '%{y:.2s}',
@@ -1266,7 +1376,7 @@ collaborative_comps_initial <- reactive({
         y = ~ collaborative,
         type = 'bar',
         name = collaborative(),
-        height = 235,
+        height = 250,
         marker = list(color = '#DB9743'),
         hovertemplate = paste0(collaborative()  , ': %{y:.4s}<extra></extra>'),
         texttemplate = '%{y:.3s}',
@@ -1888,7 +1998,7 @@ output$x_var_disp <- renderUI({
     shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(27:82)])
   }
   else if (input$x_cat == "Working Conditions") {
-    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(9:11, 26, 83:91)])
+    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(9:11, 26, 83:91, 2, 106,107, 112,113)])
   
   }
   }
@@ -1909,7 +2019,7 @@ output$y_var_disp <- renderUI({
     shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(27:82)])
   }
   else if (input$y_cat == "Working Conditions") {
-    shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(9:11, 26, 83:91)])
+    shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(9:11, 26, 83:91, 2, 106,107, 112,113)])
   
   }
 })
@@ -1924,12 +2034,11 @@ plotdata <- reactive({
       collaborative %in% comp_collabortives() | collaborative == collaborative() &
       !is.na(y())
     ) %>%
-    dplyr::mutate(
-      is_district = ifelse(collaborative == collaborative(), collaborative(), "Others"),
-      short_district = stringr::str_trunc(collaborative, 20, "right")
-    ) %>% 
-    dplyr::select(collaborative, y(), x(), short_district) %>% 
-    dplyr::filter(!is.na(y()))
+    dplyr::select(collaborative, y(), x()) %>% 
+    dplyr::mutate(short_collaborative =  purrr::map(collaborative, function(x) names(collaborative_list)[collaborative_list == x]) %>% 
+                             unlist()) %>% 
+    dplyr::filter(!is.na(y())) %>% 
+    unique()
 })
 
 y_col <-reactive({
@@ -1937,6 +2046,8 @@ y_col <-reactive({
     dplyr::filter(!is.na(y())) %>%
     dplyr::pull(y())
 })
+
+
 
 output$userplot <- plotly::renderPlotly({
         if (input$plot_type == "Scatter"){
@@ -1952,9 +2063,9 @@ output$userplot <- plotly::renderPlotly({
                     size = 30,
                     opacity = .5
                 ),
-                color = ~short_district,
+                color = ~short_collaborative,
                 colors = ggsci::pal_jco()(10),
-                hovertemplate = paste((plotdata() %>% dplyr::pull(collaborative)),
+                hovertemplate = ~paste(collaborative,
                                       "<br>",
                                       names(axis_options)[axis_options == x()], ":",
                                       '%{x:.4s}',
@@ -1990,7 +2101,7 @@ output$userplot <- plotly::renderPlotly({
               marker = list(colors = ggsci::pal_jco()(10)),
               textinfo = 'label+percent',
               hoverinfo = 'text',
-              text = ~ paste(names(axis_options)[axis_options == y()], ':', get(y())),
+              text = ~paste(names(axis_options)[axis_options == y()], ':', get(y())),
               height = 630
             ) %>%
               plotly::add_pie(hole = 0.4) %>%
@@ -2010,13 +2121,13 @@ output$userplot <- plotly::renderPlotly({
                 x = ~collaborative,
                 y = ~get(y()),
                 type = "bar",
-                color = ~short_district,
+                color = ~short_collaborative,
                 colors = ggsci::pal_jco()(10),
                 hovertemplate = paste('%{x}',
                                       "<br>",
                                       names(axis_options)[axis_options == y()], ":",
                                       '%{y:.4s}', "<extra></extra>"),
-                texttemplate = '%{y:.3s}', 
+                texttemplate = '%{y:.3s}',
                 textposition = 'outside',
                 height = 630) %>%
                 plotly::layout(xaxis = list(title = "Collaborative", showticklabels = F, fixedrange = T),
