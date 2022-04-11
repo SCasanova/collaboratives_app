@@ -49,7 +49,7 @@ all_tuition <- read_csv('FY22 Rates.csv') %>%
 
 para_salaries <- read_csv('collaborative_conditions.csv') %>% 
   janitor::clean_names() %>% 
-  select(collaborative, work_year:vacation_days) %>% 
+  select(collaborative, work_year:vacation_days, health_pct) %>% 
   dplyr::slice(1:17)
 
 
@@ -63,17 +63,21 @@ fy2022_data <- read_csv('Collaboratives - FY22.csv') %>%
 
 fy2022_salaries <- read_csv('FY22 Salaries.csv') %>% 
   janitor::clean_names() %>% 
-  select(collaborative, bachelors_step_1:ph_d_top_step)
-
-fy2022_salaries$lower_right <- pmax(fy2022_salaries$masters_top_step,
-                                    fy2022_salaries$masters_15_top_step ,
-                                    fy2022_salaries$masters_30_top_step ,
-                                    fy2022_salaries$cags_top_step ,
-                                    fy2022_salaries$ph_d_top_step)
+  select(collaborative, bachelors_step_1:ph_d_top_step) %>% 
+  mutate(across(.fns = function(x)ifelse(x == 0, NA, x)),
+         lower_right = pmax(masters_top_step, masters_15_top_step, masters_30_top_step, cags_top_step,ph_d_top_step, na.rm = T ))
 
 fy2022_financials <- read_csv('collaborative_financials.csv') %>% 
   janitor::clean_names() %>% 
   select(-c(collaborative_region))
+
+enrollment <- read_csv('Enrollment.csv') %>% 
+  janitor::clean_names() %>% 
+  rename(collaborative = collaborative_name)
+
+diversity <- read_csv('Enrollment_Diversity.csv') %>% 
+  janitor::clean_names() %>% 
+  rename(collaborative = collaborative_name)
 
 
 collaborative_data <- fy2022_data %>% 
@@ -82,7 +86,9 @@ collaborative_data <- fy2022_data %>%
   left_join(all_tuition, by = 'collaborative') %>% 
   left_join(para_salaries, by = 'collaborative') %>% 
   left_join(fy2022_salaries, by = 'collaborative') %>% 
-  left_join(director_details, by = 'collaborative')
+  left_join(director_details, by = 'collaborative') %>% 
+  left_join(enrollment, by = 'collaborative') %>% 
+  left_join(diversity, by = 'collaborative')
 
 
 write_csv(collaborative_data, 'collaborative_data.csv')  
