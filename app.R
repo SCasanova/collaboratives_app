@@ -153,8 +153,9 @@ check_creds <- function(dbname, host, port, db_user, db_password) {
 school_data <- read.csv('collaborative_data.csv') #Main data for plots
 sending_data <- read.csv('sending_districts.csv') #Data from sending districts
 sending_overview <- readRDS('sending_overview.rds') #Table from sending districts
-districts_serving <- read.csv('districts_serving.csv') #Each collaborative's serving districts
-
+districts_serving <- readr::read_csv('districts_serving.csv') #Each collaborative's serving districts
+private_data <- read.csv('private_daily_rates.csv')
+  
 #Categories and options used for the plot feature
 stat_categories <- c(
   'Basic Info',
@@ -280,6 +281,7 @@ statistic_names_full <- c( #Full names of all columns for the school_data datafr
   'Professional Dues Paid',
   'Travel Mileage',
   '% Medical Insurance Paid',
+  'Board of Directors',
   "PK Enrollment",
   "K Enrollment",
   "G1 Enrollment",
@@ -331,6 +333,16 @@ overview_statistics <- c( #Full name for the overview table stats
     "Total Pupil FTE",
     "Total Expenditure per Pupil"
 )
+
+exec_options <- c('fy22_executive_director_base_salary','number_of_years_in_profession','number_of_years_as_exec_dir')
+exec_names <- c('Director Salary', 'Years in Porfession', 'Years as Executive Director')
+    
+exec_options <- purrr::set_names(exec_options, exec_names)
+
+superind_options <- c('fy2021_salary','total_comp_pkg', 'years_exp','years_as_super', 'years_current_contract')
+superind_names <- c('Superintendent Salary (Members)', 'Total Superintendent Comp. Package ', 'Superintendent Experience', 'Years as Superintendent', 'Years on Contract')
+    
+superind_options <- purrr::set_names(superind_options, superind_names)
 
 # UI ----------------------------------------------------------------------
 
@@ -461,7 +473,8 @@ ui <- shinyMobile::f7Page(
             ),tags$div(style = 'display:flex;',
                  tags$div(class = 'side-panel',
                           style = 'padding:10px;
-                                  margin-top:10px',
+                                  margin-top:10px;
+                          margin-right:20px',
                    gt::gt_output('summary_table')
                  ),
                    htmlOutput('at_glance'),
@@ -473,11 +486,10 @@ ui <- shinyMobile::f7Page(
                      hover = T,
                      intensity = 16,
                      shinyMobile::f7Card(
-                       tags$div('Sending Districts', class = 'text1'),
+                       tags$div('Member Districts', class = 'text1'),
                        tags$div(htmlOutput('comp_2'),style = 'margin-bottom:20px;'),
                        br(),
                        plotly::plotlyOutput('sending_cola', height = 'auto'),
-                       plotly::plotlyOutput('sending_budget', height = 'auto'),
                        plotly::plotlyOutput('sending_enrollment', height = 'auto'),
                        plotly::plotlyOutput('sending_upper_left', height = 'auto'),
                        plotly::plotlyOutput('sending_lower_right', height = 'auto'),
@@ -567,6 +579,12 @@ ui <- shinyMobile::f7Page(
                      shinyMobile::f7Shadow(
                        hover = T,
                        intensity = 16,
+                       shinyMobile::f7Card(
+                         plotly::plotlyOutput('sending_budget', height = 'auto')
+                       )),
+                     shinyMobile::f7Shadow(
+                       hover = T,
+                       intensity = 16,
                        shinyMobile::f7Card(tags$div(
                          style = "display:flex;",
                          tags$div(style = 'width:65%',
@@ -632,6 +650,19 @@ ui <- shinyMobile::f7Page(
                                     plotly::plotlyOutput('health'))
                            )
                          )
+                     ),
+                     shinyMobile::f7Shadow(
+                       hover = T,
+                       intensity = 16,
+                       shinyMobile::f7Card(
+                         tags$div(
+                           style = 'display:flex',
+                           tags$div(style = 'width:50%',
+                                    plotly::plotlyOutput('prof_union')),
+                           tags$div(style = 'width:50%',
+                                    plotly::plotlyOutput('non_prof_union'))
+                           )
+                         )
                      )
             )
           ), 
@@ -664,29 +695,59 @@ ui <- shinyMobile::f7Page(
                icon = shinyMobile::f7Icon("doc_person"),
                active = F,
                tags$div(
-                 id = 'director-plots',
-                 shinyMobile::f7Shadow(
-                   hover = T,
-                   intensity = 16,
-                   shinyMobile::f7Card(
-                     tags$div(
-                       style = 'display:flex;',
-                       tags$div(
-                         class = 'grid-block',
-                         plotly::plotlyOutput('director_salary', height = 'auto')
-                       ),
-                       tags$div(
-                         class = 'grid-block',
-                         plotly::plotlyOutput('director_years', height = 'auto')
-                       ),
-                       tags$div(
-                         class = 'grid-block',
-                         plotly::plotlyOutput('director_years_prof', height = 'auto')
-                       )
-                     )
-                   )
-                 )
-               )
+              shinyMobile::f7Button(
+                inputId = 'down_exec',
+                label = tags$span(tags$i(class = 'fas fa-camera'), tags$span('Download as Image')) #fas fa classes corresponf to fontawesome
+              ),
+              class = "other-button card-button2"
+            ),
+            tags$div(
+              style = 'display:flex',
+              tags$div(
+                style = 'width:20%;',
+                shinyMobile::f7Shadow(
+                  hover = T,
+                  intensity = 16,
+                  shinyMobile::f7Card(
+                    uiOutput('y_var_exec')
+                  )
+                )
+              ),
+              tags$div(
+                style = 'width:80%;',
+                id = 'exec_plots',
+                shinyMobile::f7Shadow(
+                  hover = T,
+                  intensity = 16,
+                  shinyMobile::f7Card(plotly::plotlyOutput('userplot_exec', height = 'auto'))
+                )
+                
+              )
+            )
+               # tags$div(
+               #   id = 'director-plots',
+               #   shinyMobile::f7Shadow(
+               #     hover = T,
+               #     intensity = 16,
+               #     shinyMobile::f7Card(
+               #       tags$div(
+               #         style = 'display:flex;',
+               #         tags$div(
+               #           class = 'grid-block',
+               #           plotly::plotlyOutput('director_salary', height = 'auto')
+               #         ),
+               #         tags$div(
+               #           class = 'grid-block',
+               #           plotly::plotlyOutput('director_years', height = 'auto')
+               #         ),
+               #         tags$div(
+               #           class = 'grid-block',
+               #           plotly::plotlyOutput('director_years_prof', height = 'auto')
+               #         )
+               #       )
+               #     )
+               #   )
+               # )
                
           ),
           shinyMobile::f7Tab(
@@ -741,11 +802,31 @@ ui <- shinyMobile::f7Page(
                )
           ),
           shinyMobile::f7Tab(
-            tabName = 'Salaries',
+            tabName = 'Admin Comps.',
             icon = shinyMobile::f7Icon("lock_shield"),
             hidden = F,
             htmlOutput('cond_tab')
             
+          ),
+          shinyMobile::f7Tab(
+               tabName = "Private Schools",
+                icon = shinyMobile::f7Icon("gauge"),
+                active = F,
+               tags$div(
+              shinyMobile::f7Button(
+                inputId = 'down_private',
+                label = tags$span(tags$i(class = 'fas fa-camera'), tags$span('Donwload as Image')) #fas fa classes corresponf to fontawesome
+              ),
+              class = "other-button card-button2"
+            ),
+            tags$div(id = '#private-plots',
+                     shinyMobile::f7Shadow(
+                       hover = T,
+                       intensity = 16,
+                       shinyMobile::f7Card(
+                                    plotly::plotlyOutput('privates')),
+                         )
+            )
           ),
           shinyMobile::f7Tab(
                tabName = "Plots",
@@ -1036,8 +1117,9 @@ collaborative_comps_initial <- reactive({
           total_staff_headcount = paste("Total Staff:", total_staff_headcount),
           total_ft_es_of_staff = paste("Total FTE:", total_ft_es_of_staff),
           total_students = paste("Total Students:", total_students),
+          board_of_directors = paste("Board of Directors:", board_of_directors),
         ) %>%
-        dplyr::select(districts_served, total_staff_headcount, total_ft_es_of_staff,total_students) %>%
+        dplyr::select(districts_served, total_staff_headcount, total_ft_es_of_staff,total_students,board_of_directors) %>%
         t() %>%
         as.data.frame()
       
@@ -1073,7 +1155,9 @@ collaborative_comps_initial <- reactive({
        )
      ) %>%
      dplyr::rename(aaa = is_district) %>% #make sure is_district is the first row
-     dplyr::mutate(aaa  = ifelse(aaa == collaborative(), 'collaborative', aaa)) %>%
+     dplyr::mutate(aaa  = ifelse(aaa == collaborative(), 'collaborative', aaa),
+                  no_prof_union = 1-prof_union,
+                  no_non_prof_union = 1-non_prof_union) %>%
      t() %>%
      data.frame() %>%
      janitor::row_to_names(1) %>% #correct is_district column names
@@ -1103,27 +1187,6 @@ collaborative_comps_initial <- reactive({
      janitor::clean_names() %>% 
      dplyr::mutate(category = rownames(.))
  })
- 
- test <- c("Attleboro"                                           ,
- "Bellingham"                                          ,
- "Blackstone-Millville Regional"                       ,
- "Easton"                                              ,
- "Franklin"                                            ,
- "Foxboro"                                             ,
- "Hopedale"                                            ,
- "King Philip Regional"                                ,
- "Mansfield"                                           ,
- "Milford"                                             ,
- "Norfolk"                                             ,
- "North Attleboro"                                     ,
- "Norton"                                              ,
- "Plainville"                                          ,
- "Swansea"                                             ,
- "Tri County Regional Vocational-Technical High School",
- "Uxbridge"                                            ,
- "Walpole"                                             ,
- "Wrentham"  )
-
  
  cola_data <- reactive({ #This syntax is recurring. filter by category column to select necessary stats. In some case a conversion to numeric is needed as well
    sending_plot_df() %>% 
@@ -1157,38 +1220,6 @@ collaborative_comps_initial <- reactive({
         )
   })
 
- sending_budget_data <- reactive({
-   sending_plot_df() %>% 
-     dplyr::filter(category %in% c('total_exp_2021_22','total_exp_2020_21'))
- })
- 
- 
- output$sending_budget <- plotly::renderPlotly({
-      req(collaborative())
-      plotly::plot_ly(
-        sending_budget_data(),
-        x = ~x,
-        y = c('2020-21', '2021-22'),
-        type = 'bar',
-        name = 'A',
-        height = 150,
-        orientation = 'h',
-        marker = list(color = '#2a3a6e'),
-        hovertemplate = '%{x:.4s}<extra></extra>',
-        texttemplate = '%{x:.3s}',
-        textposition = 'inside'
-      ) %>%
-         plotly:: config(displayModeBar = FALSE) %>%
-        plotly::layout(
-          xaxis = list(title = "", fixedrange = T,showticklabels = F),
-          yaxis = list(title = "", fixedrange = T),
-          barmode = 'group',
-          title = 'Average Budget',
-          autosize = T,
-          showlegend =F, margin = list(l = 0,r = 0,b = 0,t = 50,pad = 4),
-          font = list(size = 12)
-        )
-  })
  
  sending_enrollment_data <- reactive({
    sending_plot_df() %>% 
@@ -1303,7 +1334,7 @@ collaborative_comps_initial <- reactive({
         y = ~x,
         x = ~ c('2020-21', '2021-22', '2022-23'),
         type = 'scatter',
-        height = 187,
+        height = 193,
         name = 'A',
         mode = 'lines+markers',
         marker = list(color = '#2a3a6e'),
@@ -1373,7 +1404,7 @@ collaborative_comps_initial <- reactive({
         y = ~ collaborative,
         type = 'bar',
         name = collaborative(),
-        height = 250,
+        height = 270,
         marker = list(color = '#DB9743'),
         hovertemplate = paste0(short_collaborative()  , ': %{y:.4s}<extra></extra>'),
         texttemplate = '%{y:.3s}',
@@ -1408,7 +1439,7 @@ collaborative_comps_initial <- reactive({
         y = ~ collaborative,
         type = 'bar',
         name = collaborative(),
-        height = 250,
+        height = 270,
         marker = list(color = '#DB9743'),
         hovertemplate = paste0(short_collaborative()  , ': %{y:.4s}<extra></extra>'),
         texttemplate = '%{y:.3s}',
@@ -1444,7 +1475,7 @@ collaborative_comps_initial <- reactive({
         y = ~ collaborative,
         type = 'bar',
         name = collaborative(),
-        height = 250,
+        height = 270,
         marker = list(color = '#DB9743'),
         hovertemplate = paste0(short_collaborative()  , ': %{y:.4s}<extra></extra>'),
         texttemplate = '%{y:.3s}',
@@ -1480,7 +1511,7 @@ collaborative_comps_initial <- reactive({
         y = ~ collaborative,
         type = 'bar',
         name = collaborative(),
-        height = 250,
+        height = 270,
         marker = list(color = '#DB9743'),
         hovertemplate = paste0(short_collaborative()  , ': %{y:.3s}<extra></extra>'),
         texttemplate = '%{y:.2s}',
@@ -1516,7 +1547,7 @@ collaborative_comps_initial <- reactive({
         y = ~ collaborative,
         type = 'bar',
         name = collaborative(),
-        height = 250,
+        height = 270,
         marker = list(color = '#DB9743'),
         hovertemplate = paste0(short_collaborative()  , ': %{y:.4s}<extra></extra>'),
         texttemplate = '%{y:.3s}',
@@ -1702,7 +1733,7 @@ collaborative_comps_initial <- reactive({
         name = collaborative(),
         marker = list(color = '#DB9743'),
         hovertemplate = paste0(short_collaborative()  , ': %{y:.1f}<extra></extra>'),
-        texttemplate = '%{y:.0f}',
+        texttemplate = '%{y:.1f}',
         textposition = 'auto'
       ) %>%
         plotly:: config(displayModeBar = FALSE) %>%
@@ -1898,6 +1929,106 @@ collaborative_comps_initial <- reactive({
         )
     )
   
+  prof_union_data  <- reactive({
+        plot_comp_df() %>%
+          dplyr::filter(category %in% c('prof_union', 'no_prof_union'))%>% 
+        dplyr::mutate(dplyr::across(.fns = as.numeric))
+    })
+  
+prof_union_text <- reactive({
+  req(comp_collabortives())
+    if(subset(prof_union_data(), rownames(prof_union_data()) == 'prof_union')$collaborative == 1 & !is.na(subset(prof_union_data(), rownames(prof_union_data()) == 'prof_union')$collaborative)){
+      paste0(short_collaborative(),'\nYes')
+    }else{
+       paste0(short_collaborative(),'\nNo')
+    }
+  })
+
+
+    output$prof_union <- plotly::renderPlotly({
+        plotly::plot_ly(
+            prof_union_data(),
+            labels = c('Yes', 'No'),
+            textposition = 'inside',
+            textinfo = 'label+percent',
+            insidetextfont = list(color = '#FFFFFF'),
+            values = ~Others,
+            hoverinfo = 'label+percent',
+            text = ~paste0(Others, '%'),
+             marker = list(colors = c("#2a3a6e", "gray"),
+                      line = list(color = '#FFFFFF', width = 1))
+            )%>%
+            plotly::add_pie(hole = 0.5)%>%
+          plotly:: config(displayModeBar = FALSE) %>%
+            plotly::layout(
+                title = "Professionals Unionized",
+                showlegend = F,
+                xaxis = list(
+                    showgrid = FALSE,
+                    zeroline = FALSE,
+                    fixedrange = T,
+                    showticklabels = FALSE
+                ),
+                annotations = list(x =0.5, y = 0.5, text = prof_union_text(), xref = "x", yref = "y", showarrow = F, font = list(color = '#DB9743', size = 16)),
+                yaxis = list(
+                    showgrid = FALSE,
+                    zeroline = FALSE,
+                    fixedrange = T,
+                    showticklabels = FALSE
+                )
+            )
+    })
+    
+    non_prof_union_data  <- reactive({
+        plot_comp_df() %>%
+          dplyr::filter(category %in% c('non_prof_union', 'no_non_prof_union'))%>% 
+        dplyr::mutate(dplyr::across(.fns = as.numeric))
+    })
+  
+non_prof_union_text <- reactive({
+  req(comp_collabortives())
+    if(subset(non_prof_union_data(), rownames(non_prof_union_data()) == 'non_prof_union')$collaborative == 1 & !is.na(subset(non_prof_union_data(), rownames(non_prof_union_data()) == 'non_prof_union')$collaborative)){
+      paste0(short_collaborative(),'\nYes')
+    }else{
+       paste0(short_collaborative(),'\nNo')
+    }
+  })
+
+
+    output$non_prof_union <- plotly::renderPlotly({
+        plotly::plot_ly(
+            non_prof_union_data(),
+            labels = c('Yes', 'No'),
+            textposition = 'inside',
+            textinfo = 'label+percent',
+            insidetextfont = list(color = '#FFFFFF'),
+            values = ~Others,
+            hoverinfo = 'label+percent',
+            text = ~paste0(Others, '%'),
+             marker = list(colors = c("#2a3a6e", "gray"),
+                      line = list(color = '#FFFFFF', width = 1))
+            )%>%
+            plotly::add_pie(hole = 0.5)%>%
+          plotly:: config(displayModeBar = FALSE) %>%
+            plotly::layout(
+                title = "Non-Professionals Unionized",
+                showlegend = F,
+                xaxis = list(
+                    showgrid = FALSE,
+                    zeroline = FALSE,
+                    fixedrange = T,
+                    showticklabels = FALSE
+                ),
+                annotations = list(x =0.5, y = 0.5, text = non_prof_union_text(), xref = "x", yref = "y", showarrow = F, font = list(color = '#DB9743', size = 16)),
+                yaxis = list(
+                    showgrid = FALSE,
+                    zeroline = FALSE,
+                    fixedrange = T,
+                    showticklabels = FALSE
+                )
+            )
+    })
+  
   
 
 # Member Plots -----------------------------------------------------------------
@@ -1905,6 +2036,39 @@ collaborative_comps_initial <- reactive({
 observeEvent(input$down_members, { #take "screenshot" of finance selector
     shinyscreenshot::screenshot(selector = '#member-plots' , filename = paste(collaborative(), 'Members'), scale = 4)
   })  
+    
+  sending_budget_data <- reactive({
+   sending_plot_df() %>% 
+     dplyr::filter(category %in% c('total_exp_2020_21')) %>% 
+      dplyr::mutate(dplyr::across(.fns = as.numeric))
+ })
+ 
+ 
+ output$sending_budget <- plotly::renderPlotly({
+      req(collaborative())
+      plotly::plot_ly(
+        sending_budget_data(),
+        x = ~x,
+        y = '',
+        type = 'bar',
+        name = 'A',
+        orientation = 'h',
+        marker = list(color = '#2a3a6e'),
+        hovertemplate = '%{x:.4s}<extra></extra>',
+        texttemplate = '%{x:.3s}',
+        textposition = 'inside',
+        height = 320
+      ) %>%
+         plotly:: config(displayModeBar = FALSE) %>%
+        plotly::layout(
+          xaxis = list(title = "", fixedrange = T,showticklabels = F,range = c(0, max(sending_budget_data()))),
+          yaxis = list(title = "", fixedrange = T),
+          autosize = T,
+          title = 'Average Member Budget',
+          showlegend =F, margin = list(l = 0,r = 0,b = 0,t = 50,pad = 4),
+          font = list(size = 15)
+        )
+  })
   
   
   finance_data <- reactive({
@@ -1985,6 +2149,7 @@ health_df <- reactive({
       dplyr::select(-category)
   })
   
+  
     
     output$sending_students <-  plotly::renderPlotly(
         plotly::plot_ly(
@@ -2002,7 +2167,9 @@ health_df <- reactive({
           xaxis = list(title = "", tickangle = -45, fixedrange = T, categoryorder = "array", categoryarray = c('PK', 'K', purrr::map_chr(seq(12), function(x){paste('Grade', x)}))),
           yaxis = list(title = "", fixedrange = T,automargin = T, range = c(0, max(general_data_send(), na.rm = T)*1.15)),
           showlegend =F,
-          font = list(size = 18)
+          margin = list(l = 0, r = 0, t = 50, b = 0, pad = 4),
+          title = 'Member District Enrollment',
+          font = list(size = 15)
         )
     )
     
@@ -2033,6 +2200,7 @@ health_df <- reactive({
           font = list(size = 18)
         )
     )
+  
 
 # Students ----------------------------------------------------------------
 
@@ -2079,7 +2247,6 @@ general_data <- reactive({
       
     })
     
-  observe(print(diversity_data()))
 
     output$student_diversity <-  plotly::renderPlotly(
         plotly::plot_ly(
@@ -2148,112 +2315,108 @@ general_data <- reactive({
 
 # Exec. Director ----------------------------------------------------------
 
-  director_salary_data <- reactive({
-    plot_comp_df() %>% 
-      dplyr::filter(category %in% c('fy22_executive_director_base_salary')) %>% 
-      dplyr::mutate(dplyr::across(.fns = as.numeric))
+#display stat options
+output$y_var_exec <- renderUI({
+      shinyMobile::f7Select(
+         'y_var_exec',
+         label = h3("Y-Axis Variable"), 
+         choices = exec_options
+       )
+    })  
+
+y_exec <- reactive(input$y_var_exec)
+
+plotdata_exec <- reactive({ #Create a dataframe with the selected collaboratives and selected stat(s)
+  req(collaborative())
+  plot_data <- school_data %>%
+    dplyr::filter(
+      collaborative %in% comp_collabortives() | collaborative == collaborative() &
+      !is.na(y_exec())
+    ) %>%
+    dplyr::select(collaborative, y_exec()) %>% 
+    dplyr::mutate(short_collaborative =  purrr::map(collaborative, function(x) names(collaborative_list)[collaborative_list == x]) %>% #get short name for all schools to display in the legend
+                             unlist()) %>% 
+    dplyr::filter(!is.na(y_exec())) %>% 
+    unique() 
+})
+
+
+y_col_exec <-reactive({ #Extract only the y column for average computations and length
+   plotdata_exec() %>%
+    dplyr::filter(!is.na(y_exec())) %>%
+    dplyr::pull(y_exec())
+})
+
+
+text_format_exec <- reactive({ #depending on the max get the correct display format (d3) for the data
+  top <- max(y_col_exec(), na.rm = T)
+  if(top<=1){
+    '%{y:.0%}'
+  } else if(top <= 100){
+    '%{y:.2s}'
+  } else{
+    '%{y:.3s}'
+  }
+})
+
+hover_format_exec <- reactive({
+  top <- max(y_col_exec(), na.rm = T)
+  if(top<=1){
+    '%{y:.1%}'
+  } else if(top <= 100){
+    '%{y:.3s}'
+  } else{
+    '%{y:.4s}'
+  }
+})
+
+
+output$userplot_exec <- plotly::renderPlotly({
+            req(y_exec())
+            y_mean <- mean(y_col_exec(), na.rm = T)
+            
+            plotly::plot_ly(
+              data =plotdata_exec(),
+                x = ~short_collaborative,
+                y = ~get(y_exec()),
+                type = "bar",
+                color = ~short_collaborative,
+                colors = ggsci::pal_jco()(10),
+                hovertemplate = paste('%{x}',
+                                      "<br>",
+                                      names(exec_options)[exec_options == y_exec()], ":",
+                                      hover_format_exec(), "<extra></extra>"),
+                texttemplate = text_format_exec(),
+                textposition = 'outside',
+                height = 630) %>%
+                plotly::layout(xaxis = list(title = "Collaborative", showticklabels = F, fixedrange = T),
+                       yaxis = list(title = names(exec_options)[exec_options == y_exec()] , fixedrange = T),
+                       title = paste0(short_collaborative(), " vs. Comparison Collaboratives",
+                                     "<br><sup>", names(exec_options)[exec_options == y_exec()], "</sup>"),
+                       legend = list(font = list(size = 11)),
+                       annotations = list(
+                           x = (length(y_col_exec()) - sum(is.na(y_col_exec()))),
+                           y = y_mean,
+                           text = paste("Avg:", prettyNum(round(y_mean, 1),',', preserve.width = 'none', scientific = F)),
+                           xref = "x",
+                           yref = "y",
+                           showarrow = TRUE,
+                           arrowhead = 7,
+                           ax = -40,
+                           ay = 40
+                       ),
+                       margin = list(l = 40,r = 0,b = 30,t = 40,pad = 4),
+                       shapes = list(type='line', x0 = 0, x1 = (length(y_col_exec()) - sum(is.na(y_col_exec()))), y0=y_mean, y1=y_mean, line=list(dash='dot', width=1)),
+                       images = list(
+                           source = base64enc::dataURI(file = "https://raw.githubusercontent.com/SCasanova/arxed_ddd/main/www/Shield%20Trim.png"),
+                           x = 1, y = 0.15,
+                           sizex = 0.15, sizey = 0.15
+                       ))
     })
-  
 
-
-  output$director_salary <-  plotly::renderPlotly(
-        plotly::plot_ly(
-        director_salary_data(),
-        x = ~c('Director Base Salary'),
-        y = ~ collaborative,
-        type = 'bar',
-        name = collaborative(),
-        marker = list(color = '#DB9743'),
-        hovertemplate = paste0(short_collaborative()  , ': %{y:.4s}<extra></extra>'),
-        texttemplate = '%{y:.3s}',
-        textposition = 'auto'
-      ) %>%
-        plotly:: config(displayModeBar = FALSE) %>%
-        plotly::add_trace(y = ~ Others,
-                  name = 'Other',
-                   hovertemplate = 'Others: %{y:,.4s}<extra></extra>',
-                   texttemplate = '%{y:,.3s}',
-                  marker = list(color = '#2a3a6e')) %>%
-        plotly::layout(
-          xaxis = list(title = "", fixedrange = T, categoryorder = "array", categoryarray = c('PK', 'K', purrr::map_chr(seq(12), function(x){paste('Grade', x)}))),
-          yaxis = list(title = "", fixedrange = T,automargin = T, range = c(0, max(director_salary_data(), na.rm = T)*1.15)),
-          barmode = 'group',
-          showlegend =F, 
-          margin = list(l = 0,r = 0,b = 0,t = 50,pad = 4), font = list(size = 15)
-        )
-    )
-  
-  director_years_data <- reactive({
-    plot_comp_df() %>% 
-      dplyr::filter(category %in% c('number_of_years_as_exec_dir')) %>% 
-      dplyr::mutate(dplyr::across(.fns = as.numeric))
-    })
-  
-  
-
-
-  output$director_years <-  plotly::renderPlotly(
-        plotly::plot_ly(
-        director_years_data(),
-        x = ~c('Years as Executive Director'),
-        y = ~ collaborative,
-        type = 'bar',
-        name = collaborative(),
-        marker = list(color = '#DB9743'),
-        hovertemplate = paste0(short_collaborative()  , ': %{y:.0f}<extra></extra>'),
-        texttemplate = '%{y:.0f}',
-        textposition = 'auto'
-      ) %>%
-        plotly:: config(displayModeBar = FALSE) %>%
-        plotly::add_trace(y = ~ Others,
-                  name = 'Other',
-                   hovertemplate = 'Others: %{y:,.1f}<extra></extra>',
-                   texttemplate = '%{y:,.0f}',
-                  marker = list(color = '#2a3a6e')) %>%
-        plotly::layout(
-          xaxis = list(title = "", fixedrange = T, categoryorder = "array", categoryarray = c('PK', 'K', purrr::map_chr(seq(12), function(x){paste('Grade', x)}))),
-          yaxis = list(title = "", fixedrange = T,automargin = T, range = c(0, max(director_years_data(), na.rm = T)*1.15)),
-          barmode = 'group',
-          showlegend =F, 
-          margin = list(l = 0,r = 0,b = 0,t = 50,pad = 4), font = list(size = 15)
-        )
-    )
-  
-  director_years_prof_data <- reactive({
-    plot_comp_df() %>% 
-      dplyr::filter(category %in% c('number_of_years_in_profession')) %>% 
-      dplyr::mutate(dplyr::across(.fns = as.numeric))
-    })
-  
-
-
-  output$director_years_prof <-  plotly::renderPlotly(
-        plotly::plot_ly(
-        director_years_prof_data(),
-        x = ~c('Years in Profession'),
-        y = ~ collaborative,
-        type = 'bar',
-        name = collaborative(),
-        marker = list(color = '#DB9743'),
-        hovertemplate = paste0(short_collaborative()  , ': %{y:.0f}<extra></extra>'),
-        texttemplate = '%{y:.0f}',
-        textposition = 'auto'
-      ) %>%
-        plotly:: config(displayModeBar = FALSE) %>%
-        plotly::add_trace(y = ~ Others,
-                  name = 'Other',
-                   hovertemplate = 'Others: %{y:,.1f}<extra></extra>',
-                   texttemplate = '%{y:,.0f}',
-                  marker = list(color = '#2a3a6e')) %>%
-        plotly::layout(
-          xaxis = list(title = "", fixedrange = T, categoryorder = "array", categoryarray = c('PK', 'K', purrr::map_chr(seq(12), function(x){paste('Grade', x)}))),
-          yaxis = list(title = "", fixedrange = T,automargin = T, range = c(0, max(director_years_prof_data(), na.rm = T)*1.15)),
-          barmode = 'group',
-          showlegend =F, 
-          margin = list(l = 0,r = 0,b = 0,t = 50,pad = 4), font = list(size = 15)
-        )
-    )
- 
+observeEvent(input$down_exec, { #take "screenshot" of  selector
+    shinyscreenshot::screenshot(selector = '#exec_plots' , filename =  paste(collaborative(),'Executive Directors'), scale = 4)
+  })
 
 # Tuition -----------------------------------------------------------------
 
@@ -2589,7 +2752,7 @@ output$x_var_disp <- renderUI({ #Populate variable options conditionally dependi
     shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(4:8,16)])
   }
   else  if (input$x_cat == "Finances") {
-    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(2,3,12,13,17,93:105)])
+    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(3,12,13,17,93:105)])
   }
   else  if (input$x_cat == "Tuitions") {
     shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(14,15,18:25)])
@@ -2601,7 +2764,7 @@ output$x_var_disp <- renderUI({ #Populate variable options conditionally dependi
     shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(9:11, 26, 83:92, 109:111,114)])
   }
   else if (input$x_cat == "Enrollment") {
-    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(115:139)])
+    shinyMobile::f7Select("x_var",h3('X-Axis Variable'), choices = axis_options[c(116:140)])
   }
   }
 })
@@ -2612,7 +2775,7 @@ output$y_var_disp <- renderUI({
     shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(4:8,16)])
   }
   else  if (input$y_cat == "Finances") {
-    shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(2,3,12,13,17,93:105)])
+    shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(3,12,13,17,93:105)])
   }
   else  if (input$y_cat == "Tuitions") {
     shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(14,15,18:25)])
@@ -2624,7 +2787,7 @@ output$y_var_disp <- renderUI({
     shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(9:11, 26, 83:92, 109:111,114)])
   }
   else if (input$y_cat == "Enrollment") {
-    shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(115:139)])
+    shinyMobile::f7Select("y_var",h3('Y-Axis Variable'), choices = axis_options[c(116:140)])
   }
 })
 
@@ -2653,7 +2816,7 @@ y_col <-reactive({ #Extract only the y column for average computations and lengt
 })
 
 
-text_format <- reactive({
+text_format <- reactive({ #depending on the max get the correct display format (d3) for the data
   top <- max(y_col(), na.rm = T)
   if(top<=1){
     '%{y:.0%}'
@@ -2716,7 +2879,7 @@ output$userplot <- plotly::renderPlotly({
               plotly::layout(
                 yaxis = list(title = names(axis_options)[axis_options == y()], fixedrange = T),
                 xaxis = list(title = names(axis_options)[axis_options == x()], fixedrange = T),
-                margin = list(l = 0,r = 0,b = 10,t = 30,pad = 4), 
+                margin = list(l = 100,r = 0,b = 10,t = 30,pad = 4), 
                 title = paste0(
                   collaborative(),
                   " vs. Comparison Collaboratives",
@@ -2776,17 +2939,17 @@ output$userplot <- plotly::renderPlotly({
                                      "<br><sup>", names(axis_options)[axis_options == y()], "</sup>"),
                        legend = list(font = list(size = 11)),
                        annotations = list(
-                           x = 0,
+                           x = (length(y_col()) - sum(is.na(y_col()))),
                            y = y_mean,
                            text = paste("Avg:", prettyNum(round(y_mean, 1),',', preserve.width = 'none', scientific = F)),
                            xref = "x",
                            yref = "y",
                            showarrow = TRUE,
                            arrowhead = 7,
-                           ax = 20,
-                           ay = -40
+                           ax = -40,
+                           ay = 40
                        ),
-                       margin = list(l = 20,r = 0,b = 30,t = 40,pad = 4),
+                       margin = list(l = 100,r = 0,b = 30,t = 40,pad = 4),
                        shapes = list(type='line', x0 = 0, x1 = (length(y_col()) - sum(is.na(y_col()))), y0=y_mean, y1=y_mean, line=list(dash='dot', width=1)),
                        images = list(
                            source = base64enc::dataURI(file = "https://raw.githubusercontent.com/SCasanova/arxed_ddd/main/www/Shield%20Trim.png"),
@@ -2802,10 +2965,178 @@ observeEvent(input$down_plot, { #take "screenshot" of  selector
   })
 
 
-output$cond_tab <- renderUI({
-  check <- active_user() %in% c('Mike')
+# Private Schools ---------------------------------------------------------
+
+
+output$private <- plotly::renderPlotly(
+  plotly::plot_ly(
+        private_data(),
+        x = ~ c('Autism/Intensive', 'Autism/High-Functioning', 'Medically Fragile','Social-Emotional/Elementary', 'Social-Emotional/MS-HS', 'Learning Disabilities'), #cleaner name),
+        y = ~ Collaborative,
+        type = 'bar',
+        marker = list(color = '#DB9743'),
+        hovertemplate = paste0(short_collaborative()  , ': %{y}<extra></extra>'),
+        texttemplate = '%{y}',
+        textposition = 'outside'
+      )  %>%
+         plotly:: config(displayModeBar = FALSE) %>%
+        plotly::layout(
+          xaxis = list(title = "", tickangle = -45, fixedrange = T, categoryorder = "array", categoryarray = c('PK', 'K', purrr::map_chr(seq(12), function(x){paste('Grade', x)}))),
+          yaxis = list(title = "", fixedrange = T,automargin = T, range = c(0, max(general_data(), na.rm = T)*1.15)),
+          barmode = 'group',
+          showlegend =F,
+          font = list(size = 18)
+        ) %>%
+        plotly::add_trace(y = ~ Private,
+                  name = 'Other',
+                   hovertemplate = 'Private: %{y:,.1f}<extra></extra>',
+                   texttemplate = '%{y:,.0f}',
+                  marker = list(color = '#2a3a6e'))
+  
+)
+
+
+# Admin Comp --------------------------------------------------------------
+
+
+#display stat options
+output$y_var_superind <- renderUI({
+      shinyMobile::f7Select(
+         'y_var_superind',
+         label = h3("Y-Axis Variable"), 
+         choices = superind_options
+       )
+    })  
+
+y_superind <- reactive(input$y_var_superind)
+
+plotdata_superind <-
+  reactive({
+    #Create a dataframe with the selected collaboratives and selected stat(s)
+    req(sending_districts())
+    req(y_superind())
+      sending_data %>%
+      dplyr::filter(district_name %in% sending_districts() &
+                      !is.na(y_superind())) %>%
+      dplyr::select(district_name, y_superind()) %>%
+      unique()
+  })
+
+
+
+y_col_superind <-reactive({ #Extract only the y column for average computations and length
+   plotdata_superind() %>%
+    dplyr::filter(!is.na(y_superind())) %>%
+    dplyr::pull(y_superind())
+})
+
+
+text_format_superind <- reactive({ #depending on the max get the correct display format (d3) for the data
+  top <- max(y_col_superind(), na.rm = T)
+  if(top<=1){
+    '%{y:.0%}'
+  } else if(top <= 100){
+    '%{y:.2s}'
+  } else{
+    '%{y:.3s}'
+  }
+})
+
+hover_format_superind <- reactive({
+  top <- max(y_col_superind(), na.rm = T)
+  if(top<=1){
+    '%{y:.1%}'
+  } else if(top <= 100){
+    '%{y:.3s}'
+  } else{
+    '%{y:.4s}'
+  }
+})
+
+
+
+output$userplot_superind <- plotly::renderPlotly({
+            req(y_superind())
+            y_mean <- mean(y_col_superind(), na.rm = T)
+            
+            plotly::plot_ly(
+              data =plotdata_superind(),
+                x = ~district_name,
+                y = ~get(y_superind()),
+                type = "bar",
+                color = ~district_name,
+                colors = ggsci::pal_jco()(10),
+                hovertemplate = paste('%{x}',
+                                      "<br>",
+                                      names(superind_options)[superind_options == y_superind()], ":",
+                                      hover_format_superind(), "<extra></extra>"),
+                texttemplate = text_format_superind(),
+                textposition = 'outside',
+                height = 630) %>%
+                plotly::layout(xaxis = list(title = "District", showticklabels = F, fixedrange = T),
+                       yaxis = list(title = names(superind_options)[superind_options == y_superind()] , fixedrange = T),
+                       title = paste0(short_collaborative(), " Member Distrticts",
+                                     "<br><sup>", names(superind_options)[superind_options == y_superind()], "</sup>"),
+                       legend = list(font = list(size = 11)),
+                       annotations = list(
+                           x = (length(y_col_superind()) - sum(is.na(y_col_superind()))),
+                           y = y_mean,
+                           text = paste("Avg:", prettyNum(round(y_mean, 1),',', preserve.width = 'none', scientific = F)),
+                           xref = "x",
+                           yref = "y",
+                           showarrow = TRUE,
+                           arrowhead = 7,
+                           ax = 0,
+                           ay = 40
+                       ),
+                       margin = list(l = 100,r = 0,b = 30,t = 40,pad = 4),
+                       shapes = list(type='line', x0 = 0, x1 = (length(y_col_superind()) - sum(is.na(y_col_superind()))), y0=y_mean, y1=y_mean, line=list(dash='dot', width=1)),
+                       images = list(
+                           source = base64enc::dataURI(file = "https://raw.githubusercontent.com/SCasanova/arxed_ddd/main/www/Shield%20Trim.png"),
+                           x = 1, y = 0.15,
+                           sizex = 0.15, sizey = 0.15
+                       ))
+    })
+
+observeEvent(input$down_superind, { #take "screenshot" of  selector
+    shinyscreenshot::screenshot(selector = '#superind_plots' , filename =  paste(collaborative(),'Executive Directors'), scale = 4)
+  })
+
+
+
+output$cond_tab <- renderUI({ #Select users get access to exclusive content (work in progress)
+  check <- active_user() %in% c('Mike') #This needs to be an SQL pulled vector
   if(check & !is.na(check)){
-    plotly::plotlyOutput('test')
+     tags$div(tags$div(
+              shinyMobile::f7Button(
+                inputId = 'down_superind',
+                label = tags$span(tags$i(class = 'fas fa-camera'), tags$span('Download as Image')) #fas fa classes corresponf to fontawesome
+              ),
+              class = "other-button card-button2"
+            ),
+            tags$div(
+              style = 'display:flex',
+              tags$div(
+                style = 'width:20%;',
+                shinyMobile::f7Shadow(
+                  hover = T,
+                  intensity = 16,
+                  shinyMobile::f7Card(
+                    uiOutput('y_var_superind')
+                  )
+                )
+              ),
+              tags$div(
+                style = 'width:80%;',
+                id = 'superind_plots',
+                shinyMobile::f7Shadow(
+                  hover = T,
+                  intensity = 16,
+                  shinyMobile::f7Card(plotly::plotlyOutput('userplot_superind', height = 'auto'))
+                )
+                
+              )
+            ))
   }else{
     tags$div()
   }

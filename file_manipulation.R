@@ -55,7 +55,7 @@ para_salaries <- read_csv('collaborative_conditions.csv') %>%
 
 director_details <- read_csv('collaborative_directors.csv') %>% 
   janitor::clean_names() %>% 
-  dplyr::select(collaborative,additional_compensation,number_of_years_as_exec_dir:percent_med)
+  dplyr::select(collaborative,additional_compensation,number_of_years_as_exec_dir:percent_med,board_of_directors)
 
 fy2022_data <- read_csv('Collaboratives - FY22.csv') %>% 
   janitor::clean_names() %>% 
@@ -91,5 +91,17 @@ collaborative_data <- fy2022_data %>%
   left_join(diversity, by = 'collaborative')
 
 
-write_csv(collaborative_data, 'collaborative_data.csv')  
+write_csv(collaborative_data, 'collaborative_data.csv') 
+
+
+read_csv('FY23 private.csv') %>%
+  janitor::clean_names() %>% 
+  mutate(coll = ifelse( school != 'CREST', 'Private', 'Collaborative')) %>% 
+  group_by(coll) %>% 
+  summarise(across(autism_intensive:learning_disabilities, ~ mean(.x, na.rm = TRUE))) %>% 
+  t() %>% 
+  janitor::row_to_names(1) %>% 
+  data.frame() %>% 
+  mutate(across(Collaborative:Private, fix_num)) %>% 
+  write_csv('private_daily_rates.csv')
  
